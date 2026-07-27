@@ -74,11 +74,11 @@ PID     Process                   Remote Endpoint                Local Port  TLS
 ------------------------------------------------------------------------------------------------------------------------
 2804    Code.exe                  13.89.179.10:443               50311       TLSv1.3    TLS_AES_256_GCM_SHA384
         Subject: (binary cert, 2677 bytes)
-        Path:    C:\Users\admin_gdhaese1\AppData\Local\Programs\Microsoft VS Code\Code.exe
+        Path:    C:\Users\gdha\AppData\Local\Programs\Microsoft VS Code\Code.exe
 
 2804    Code.exe                  150.171.109.100:443            50321       TLSv1.3    TLS_AES_256_GCM_SHA384
         Subject: (binary cert, 1727 bytes)
-        Path:    C:\Users\admin_gdhaese1\AppData\Local\Programs\Microsoft VS Code\Code.exe
+        Path:    C:\Users\gdha\AppData\Local\Programs\Microsoft VS Code\Code.exe
 
 3540    coreServiceShell.exe      23.37.197.171:443              50342       TLSv1.3    TLS_AES_256_GCM_SHA384
         Subject: (binary cert, 1882 bytes)
