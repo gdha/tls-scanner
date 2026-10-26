@@ -6,7 +6,7 @@ identifies the owning process, and attempts a TLS handshake to retrieve certific
 details such as subject, issuer, and protocol version.
 
 Requirements:
-    - Python 3.8+
+    - Python 3.6+
     - Windows (uses psutil for process/connection enumeration)
     - Install dependency: pip install psutil
 
@@ -17,6 +17,7 @@ Run as Administrator for full process visibility.
 """
 
 import argparse
+import platform
 import socket
 import ssl
 import sys
@@ -25,10 +26,23 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+# ssl.SSLCertVerificationError was added in Python 3.7. On Python 3.6
+# (shipped with RHEL 8) it does not exist, so fall back to ssl.SSLError,
+# of which it is a subclass. This keeps the except clause valid everywhere.
+SSLCertVerificationError = getattr(ssl, "SSLCertVerificationError", ssl.SSLError)
+
 try:
     import psutil
 except ImportError:
-    print("psutil is required. Install it with: pip install psutil")
+    print(
+        "psutil is required but could not be imported by this Python "
+        "interpreter:\n"
+        f"    {sys.executable}\n"
+        "Install it for THIS interpreter, e.g.:\n"
+        f"    {sys.executable} -m pip install psutil\n"
+        "or install the system package (RHEL/Fedora):\n"
+        "    sudo dnf install python3-psutil"
+    )
     sys.exit(1)
 
 
@@ -113,7 +127,10 @@ def probe_tls(connection: TLSConnection, timeout: float = 3.0) -> TLSConnection:
         with socket.create_connection(
             (connection.remote_addr, connection.remote_port), timeout=timeout
         ) as sock:
-            with ctx.wrap_socket(sock, server_hostname=connection.remote_addr) as tls_sock:
+            # remote_addr is always an IP (psutil gives us no hostname).
+            # Sending an IP as SNI triggers TLSV1_UNRECOGNIZED_NAME on many
+            # servers, so omit SNI entirely.
+            with ctx.wrap_socket(sock, server_hostname=None) as tls_sock:
                 connection.tls_version = tls_sock.version()
                 cipher_info = tls_sock.cipher()
                 if cipher_info:
@@ -137,7 +154,17 @@ def probe_tls(connection: TLSConnection, timeout: float = 3.0) -> TLSConnection:
                         connection.cert_subject = f"(binary cert, {len(der)} bytes)"
 
     except ssl.SSLError as e:
-        connection.probe_error = f"SSL error: {e.reason}"
+        # On Python 3.7+ SSLCertVerificationError is a distinct subclass of
+        # SSLError; on 3.6 it does not exist. Inspect the exception to report
+        # certificate verification failures specifically where possible.
+        if SSLCertVerificationError is not ssl.SSLError and isinstance(
+            e, SSLCertVerificationError
+        ):
+            connection.probe_error = f"Certificate verification failed: {e}"
+        else:
+            # e.reason is frequently None; str(e) carries the full OpenSSL message.
+            detail = e.reason or str(e) or "handshake failed"
+            connection.probe_error = f"SSL error: {detail}"
     except socket.timeout:
         connection.probe_error = "Connection timed out"
     except OSError as e:
@@ -148,8 +175,25 @@ def probe_tls(connection: TLSConnection, timeout: float = 3.0) -> TLSConnection:
     return connection
 
 
+def _is_connection_refused(connection: TLSConnection) -> bool:
+    """
+    True if the probe failed because the remote endpoint refused the
+    connection (errno 111 / ECONNREFUSED). These are noise when scanning
+    all ports, since many endpoints are not TLS servers.
+    """
+    err = connection.probe_error
+    if not err:
+        return False
+    return "Errno 111" in err or "Connection refused" in err
+
+
 def format_results(connections: List[TLSConnection], show_probe: bool) -> str:
     """Format the scan results into a readable table."""
+    # Drop connections whose probe was refused — they clutter the output,
+    # especially with --all-ports. Only filter when probe data is shown.
+    if show_probe:
+        connections = [c for c in connections if not _is_connection_refused(c)]
+
     if not connections:
         return "No TLS connections found."
 
@@ -228,9 +272,12 @@ def main():
 
     args = parser.parse_args()
 
-    print("TLS Session Scanner for Windows")
+    system = platform.system()
+    print(f"TLS Session Scanner for {system}")
     print("=" * 40)
     print()
+
+    priv_hint = ("Administrator" if system == "Windows" else "root (sudo)")
 
     if not all(hasattr(psutil, attr) for attr in ["net_connections", "Process"]):
         print("Error: psutil version too old. Please upgrade: pip install --upgrade psutil")
@@ -242,7 +289,7 @@ def main():
     if not connections:
         port_info = "all ports" if args.all_ports else "TLS ports"
         print(f"[!] No established connections found on {port_info}.")
-        print("    Try running as Administrator for full visibility.")
+        print(f"    Try running as {priv_hint} for full visibility.")
         sys.exit(0)
 
     print(f"[*] Found {len(connections)} connection(s) on {'all' if args.all_ports else 'TLS'} ports.")

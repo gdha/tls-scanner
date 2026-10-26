@@ -1,0 +1,64 @@
+.TH TLS-SCANNER 1 "October 2026" "tls-scanner 1.0.0" "User Commands"
+.SH NAME
+tls-scanner \- scan active TLS connections and show the owning process
+.SH SYNOPSIS
+.B tls-scanner
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B tls-scanner
+enumerates established TCP connections on the local machine, filters them to
+well-known TLS ports (or all ports), maps each connection to its owning
+process, and optionally probes the remote endpoint with a new TLS handshake to
+retrieve the negotiated protocol version, cipher suite, and certificate
+details.
+.PP
+The TLS probe creates a
+.B new
+connection to the remote host and port. It does not intercept or modify the
+existing session.
+.PP
+Running with elevated privileges (root) gives full visibility of connections
+owned by other users' processes.
+.SH OPTIONS
+.TP
+.B \-\-all\-ports
+Scan all established TCP connections, not just the common TLS ports
+(443, 465, 587, 636, 853, 989, 990, 993, 995, 5223, 8443, 8883).
+.TP
+.BI \-\-timeout " SECONDS"
+Timeout in seconds for each TLS probe connection (default: 3).
+.TP
+.B \-\-no\-probe
+Skip TLS handshake probing; only list connections and owning processes.
+.TP
+.BI \-\-workers " N"
+Number of parallel probe workers (default: 10).
+.TP
+.B \-h ", " \-\-help
+Show the help message and exit.
+.SH EXAMPLES
+.TP
+.B tls-scanner
+Scan common TLS ports with certificate probing.
+.TP
+.B tls-scanner \-\-all\-ports
+Scan all established TCP connections.
+.TP
+.B tls-scanner \-\-no\-probe
+List connections and processes without probing.
+.TP
+.B tls-scanner \-\-timeout 5
+Use a 5 second probe timeout.
+.SH EXIT STATUS
+.TP
+.B 0
+Success (including when no connections are found).
+.TP
+.B 1
+A required dependency is missing or too old.
+.SH SEE ALSO
+.BR ss (8),
+.BR netstat (8),
+.BR openssl (1)
+.SH AUTHOR
+Generated packaging for the tls-scanner tool.

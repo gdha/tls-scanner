@@ -4,7 +4,7 @@ Scans active TLS connections on your Windows machine and shows which process own
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.6+
 - Windows OS
 - Administrator privileges recommended (for full process visibility)
 
@@ -126,3 +126,85 @@ pyinstaller --onefile tls_scanner.py
 ```
 
 This produces a single `tls_scanner.exe` that bundles Python and all dependencies. No Python installation needed on the target machine.
+
+Useful flags:
+
+```python
+--onefile — single EXE (slower startup, easier to distribute)
+--console — keep the console window (default for scripts)
+--icon=app.ico — custom icon
+--uac-admin — request admin elevation on launch (useful here since the scanner benefits from it)
+```
+
+*Recommendation*
+
+PyInstaller is the path of least resistance for your Windows. It handles psutil (which has C extensions) without extra config. A quick build command:
+
+```
+pyinstaller --onefile --uac-admin --name tls-scanner tls_scanner.py
+
+```
+
+The resulting `tls-scanner.exe` can be copied to any Windows machine and run directly — no Python install required. The `--uac-admin` flag will prompt for elevation automatically, which is ideal since the scanner needs admin rights for full process visibility.
+
+## RPM Package (Linux / RHEL 9)
+
+Although the tool is primarily aimed at Windows, it also runs on Linux
+(`psutil` enumerates connections there too). An RPM package is provided for
+RHEL 9 and compatible distributions.
+
+### Build the RPM
+
+Requires the `rpm-build` package (and optionally `rpmlint`):
+
+```bash
+sudo dnf install -y rpm-build rpmlint
+./packaging/build-rpm.sh
+```
+
+The script stages a source tarball, runs `rpmbuild -ba`, and (if `rpmlint`
+is installed) lints the result. Artifacts are written under the rpmbuild
+tree, typically:
+
+```
+~/rpmbuild/RPMS/noarch/tls-scanner-1.0.0-1.el9.noarch.rpm
+~/rpmbuild/SRPMS/tls-scanner-1.0.0-1.el9.src.rpm
+```
+
+### Install
+
+```bash
+dnf install --nobest tls-scanner
+```
+
+This pulls in `python3` and `python3-psutil` automatically.
+
+### Run
+
+Once installed, the tool is available on `PATH` as `tls-scanner`:
+
+```bash
+tls-scanner --no-probe      # list connections and processes
+tls-scanner --all-ports     # scan all established TCP connections
+man tls-scanner             # view the manual page
+```
+
+Run with `sudo` for full visibility of connections owned by other users'
+processes.
+
+### Package layout
+
+| Path | Contents |
+| --- | --- |
+| `/usr/bin/tls-scanner` | Launcher that invokes the script with `python3` |
+| `/usr/libexec/tls-scanner/tls_scanner.py` | The application |
+| `/usr/share/man/man1/tls-scanner.1.gz` | Man page |
+| `/usr/share/doc/tls-scanner/README.md` | This document |
+| `/usr/share/licenses/tls-scanner/LICENSE` | License |
+
+The packaging sources live in `packaging/`:
+
+- `packaging/tls-scanner.spec` — RPM spec file
+- `packaging/tls-scanner.1` — man page
+- `packaging/build-rpm.sh` — build helper
+
