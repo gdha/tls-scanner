@@ -192,7 +192,35 @@ man tls-scanner             # view the manual page
 Run with `sudo` for full visibility of connections owned by other users'
 processes.
 
-### Package layout
+## Debian Package (Ubuntu / Debian)
+
+Build the architecture-independent `.deb` package with `dpkg-deb`:
+
+```bash
+sudo apt install -y dpkg-dev
+./packaging/build-deb.sh
+```
+
+The package is written to `dist/tls-scanner_1.0.0_all.deb`. Install it with:
+
+```bash
+sudo apt install ./dist/tls-scanner_1.0.0_all.deb
+```
+
+This installs `python3` and `python3-psutil` as dependencies. Run `tls-scanner`
+with `sudo` for full visibility, or use `man tls-scanner` for the manual page.
+
+### Debian package layout
+
+| Path | Contents |
+| --- | --- |
+| `/usr/bin/tls-scanner` | Launcher |
+| `/usr/lib/tls-scanner/tls_scanner.py` | The application |
+| `/usr/share/man/man1/tls-scanner.1.gz` | Man page |
+| `/usr/share/doc/tls-scanner/README.md` | This document |
+| `/usr/share/doc/tls-scanner/copyright` | MIT license |
+
+### RPM package layout
 
 | Path | Contents |
 | --- | --- |
@@ -206,5 +234,6 @@ The packaging sources live in `packaging/`:
 
 - `packaging/tls-scanner.spec` — RPM spec file
 - `packaging/tls-scanner.1` — man page
+- `packaging/debian-control` — Debian package metadata
+- `packaging/build-deb.sh` — Debian package build helper
 - `packaging/build-rpm.sh` — build helper
-
