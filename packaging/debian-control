@@ -1,0 +1,11 @@
+Package: tls-scanner
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-psutil
+Maintainer: TLS Scanner Contributors
+Description: Scan active TLS connections and show the owning process
+ tls-scanner enumerates established TCP connections, maps each connection
+ to its owning process, and can probe remote endpoints for TLS details.
+ Run as root for full visibility of connections owned by other users.

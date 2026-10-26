@@ -1,15 +1,20 @@
 NAME    := tls-scanner
 VERSION := 1.0.0
 
-.PHONY: all clean rpm exe help
+.PHONY: all clean deb rpm exe help
 
 all: help
 
 help:
 	@echo "Targets:"
-	@echo "  clean  - remove build artifacts (caches, PyInstaller & RPM output)"
+	@echo "  clean  - remove build artifacts (caches, PyInstaller & package output)"
+	@echo "  deb    - build the Debian package (packaging/build-deb.sh)"
 	@echo "  rpm    - build the RPM package (packaging/build-rpm.sh)"
 	@echo "  exe    - build a standalone EXE via PyInstaller"
+
+# Build the Debian package.
+deb:
+	./packaging/build-deb.sh
 
 # Build the RPM package.
 rpm:
